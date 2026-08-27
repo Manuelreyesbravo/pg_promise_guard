@@ -1,0 +1,7 @@
+# pg_promise_guard extension
+comment = 'Find guarantees the schema claims and silently stopped enforcing'
+default_version = '0.1.0'
+relocatable = false
+# No requires: it reads only the system catalogs. That is deliberate -- a check
+# that needs its own dependencies is one more reason not to install it on the
+# database that most needs checking.
