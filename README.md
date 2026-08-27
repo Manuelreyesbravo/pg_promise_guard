@@ -81,10 +81,12 @@ Declared here rather than hidden in the version number:
 - Objects that belong to an extension are skipped: an extension's own design
   decisions are not your database's mistakes. If you want to audit those too,
   query the catalogs directly.
-- Tested against PostgreSQL 19beta2. The catalog columns it reads
+- Tested on PostgreSQL **18.6 and 19beta2**, both green against the same
+  expected output — so nothing here depends on 19. The catalog columns it reads
   (`pg_index.indisvalid`, `pg_constraint.convalidated`, `pg_trigger.tgenabled`,
-  `pg_class.relforcerowsecurity`) are old and stable, so it should work well
-  before that, but that is untested and is stated as untested.
+  `pg_class.relforcerowsecurity`) have existed since 9.5 or earlier, which is
+  why `META.json` claims 13, but versions below 18 are **untested** and that is
+  stated here rather than implied by the version number.
 
 ## Tests
 
