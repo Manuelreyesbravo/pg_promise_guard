@@ -10,7 +10,10 @@
 -- SHOW_CONTEXT never: the CONTEXT line carries source positions that shift with
 -- every edit of the SQL, and the test would break on cosmetic changes.
 \set SHOW_CONTEXT never
-CREATE EXTENSION pg_promise_guard;
+-- CASCADE porque desde 0.2.0 watch() apoya en pg_living_assertions: leer el
+-- catalogo sigue siendo trabajo de esta extension, RECORDAR que lo leiste no.
+CREATE EXTENSION pg_promise_guard CASCADE;
+NOTICE:  installing required extension "pg_living_assertions"
 CREATE SCHEMA pgd;
 -- ===========================================================================
 -- A clean schema must be silent.
@@ -19,17 +22,15 @@ CREATE TABLE pgd.ok (id int PRIMARY KEY, v text NOT NULL);
 CREATE UNIQUE INDEX ok_v ON pgd.ok (v);
 ALTER TABLE pgd.ok ADD CONSTRAINT v_no_vacio CHECK (v <> '');
 SELECT count(*) AS hallazgos_en_esquema_sano FROM check_promises('pgd');
- hallazgos_en_esquema_sano 
----------------------------
-                         0
-(1 row)
-
+ERROR:  function check_promises(unknown) does not exist
+LINE 1: SELECT count(*) AS hallazgos_en_esquema_sano FROM check_prom...
+                                                          ^
+DETAIL:  A function of that name exists, but it is not in the search_path.
 SELECT promises_kept('pgd') AS promesas_cumplidas;
- promesas_cumplidas 
---------------------
- t
-(1 row)
-
+ERROR:  function promises_kept(unknown) does not exist
+LINE 1: SELECT promises_kept('pgd') AS promesas_cumplidas;
+               ^
+DETAIL:  A function of that name exists, but it is not in the search_path.
 -- ===========================================================================
 -- PROMISE 1: "this column is unique"
 -- ===========================================================================
@@ -49,11 +50,10 @@ SELECT count(*) AS filas_con_el_mismo_rut FROM pgd.clientes WHERE rut = 'dup';
 (1 row)
 
 SELECT kind, object, severity FROM check_promises('pgd') ORDER BY kind, object;
-         kind         |       object        | severity 
-----------------------+---------------------+----------
- invalid_unique_index | pgd.clientes_rut_uk | breach
-(1 row)
-
+ERROR:  function check_promises(unknown) does not exist
+LINE 1: SELECT kind, object, severity FROM check_promises('pgd') ORD...
+                                           ^
+DETAIL:  A function of that name exists, but it is not in the search_path.
 -- ===========================================================================
 -- PROMISE 2: "this CHECK is guaranteed"
 -- ===========================================================================
@@ -101,47 +101,110 @@ CREATE POLICY solo_lo_mio ON pgd.tenant_data
 -- ===========================================================================
 SELECT kind, object, relation, severity FROM check_promises('pgd')
 ORDER BY severity, kind, object;
-         kind         |       object        |    relation     | severity 
-----------------------+---------------------+-----------------+----------
- disabled_trigger     | pgd.audita          | pgd.facturas    | breach
- invalid_unique_index | pgd.clientes_rut_uk | pgd.clientes    | breach
- unenforced_rls       | pgd.tenant_data     | pgd.tenant_data | breach
- not_valid_constraint | pgd.monto_positivo  | pgd.facturas    | gap
-(4 rows)
-
+ERROR:  function check_promises(unknown) does not exist
+LINE 1: SELECT kind, object, relation, severity FROM check_promises(...
+                                                     ^
+DETAIL:  A function of that name exists, but it is not in the search_path.
 SELECT promises_kept('pgd') AS promesas_cumplidas;
- promesas_cumplidas 
---------------------
- f
-(1 row)
-
+ERROR:  function promises_kept(unknown) does not exist
+LINE 1: SELECT promises_kept('pgd') AS promesas_cumplidas;
+               ^
+DETAIL:  A function of that name exists, but it is not in the search_path.
 -- A gap alone must NOT turn the monitor red: a NOT VALID constraint is a
 -- legitimate mid-migration state, and a check that is red on purpose gets
 -- silenced -- taking the real breaches with it.
 CREATE SCHEMA pgd2;
 CREATE TABLE pgd2.t (id int, monto numeric);
+CREATE UNIQUE INDEX t_id_uk ON pgd2.t (id);
 INSERT INTO pgd2.t VALUES (1, -1);
 ALTER TABLE pgd2.t ADD CONSTRAINT m_pos CHECK (monto > 0) NOT VALID;
 SELECT count(*) AS solo_gaps FROM check_promises('pgd2');
- solo_gaps 
------------
-         1
-(1 row)
-
+ERROR:  function check_promises(unknown) does not exist
+LINE 1: SELECT count(*) AS solo_gaps FROM check_promises('pgd2');
+                                          ^
+DETAIL:  A function of that name exists, but it is not in the search_path.
 SELECT promises_kept('pgd2') AS sigue_verde_con_un_gap;
- sigue_verde_con_un_gap 
-------------------------
- t
-(1 row)
-
+ERROR:  function promises_kept(unknown) does not exist
+LINE 1: SELECT promises_kept('pgd2') AS sigue_verde_con_un_gap;
+               ^
+DETAIL:  A function of that name exists, but it is not in the search_path.
 -- Fixing the promise must clear the finding: a checker that keeps complaining
 -- after the fix is a checker that gets turned off.
 ALTER TABLE pgd.facturas ENABLE TRIGGER audita;
 SELECT count(*) AS triggers_apagados FROM check_promises('pgd')
 WHERE kind = 'disabled_trigger';
- triggers_apagados 
--------------------
-                 0
+ERROR:  function check_promises(unknown) does not exist
+LINE 1: SELECT count(*) AS triggers_apagados FROM check_promises('pg...
+                                                  ^
+DETAIL:  A function of that name exists, but it is not in the search_path.
+-- ===========================================================================
+-- 0.2.0 -- LA MEMORIA DEL ESCANER
+--
+-- Todo lo de arriba contesta "que esta roto AHORA". Las tres preguntas que un
+-- escaner sin estado NO puede contestar, y que deciden el criterio declarado
+-- en yggdrasil sql/064 antes de escribir este port:
+--   1. cuando se escaneo por ultima vez
+--   2. que dijo la vez anterior
+--   3. si alguien lo escaneo alguna vez
+-- La tercera es la que importa: sin estado, "limpio" y "nadie lo miro" dan el
+-- MISMO resultado vacio, y un resultado vacio se lee como alta medica.
+-- ===========================================================================
+-- PREGUNTA 3, en la direccion que nadie prueba: antes de registrar nada, la
+-- respuesta no es "limpio", es "no hay nada vigilando".
+SELECT living_assertions.state('promises:pgd2') AS antes_de_vigilar;
+ antes_de_vigilar 
+------------------
+ unregistered
+(1 row)
+
+SELECT promise_guard.watch('pgd2') > 0 AS vigilada;
+ vigilada 
+----------
+ t
+(1 row)
+
+SELECT living_assertions.state('promises:pgd2') AS con_solo_un_gap;
+ con_solo_un_gap 
+-----------------
+ holds
+(1 row)
+
+-- PREGUNTA 1: la edad viaja con el veredicto.
+SELECT name, state, age IS NOT NULL AS trae_su_edad
+  FROM living_assertions.status WHERE name = 'promises:pgd2';
+     name      | state | trae_su_edad 
+---------------+-------+--------------
+ promises:pgd2 | holds | t
+(1 row)
+
+-- El escaner encuentra una BRECHA de verdad: un indice UNIQUE invalido es
+-- exactamente el caso del encabezado -- el catalogo dice UNIQUE y los
+-- duplicados entran sin un error ni una linea de log.
+UPDATE pg_index SET indisvalid = false
+ WHERE indexrelid = 'pgd2.t_id_uk'::regclass;
+SELECT living_assertions.run('promises:pgd2') IS NOT NULL AS re_escaneada;
+ re_escaneada 
+--------------
+ t
+(1 row)
+
+SELECT state, detail FROM living_assertions.status WHERE name = 'promises:pgd2';
+ state  |                detail                
+--------+--------------------------------------
+ broken | invalid_unique_index on pgd2.t_id_uk
+(1 row)
+
+-- PREGUNTA 2: que dijo la vez anterior. Esto es lo que 0.1.0 no podia contestar
+-- de ninguna forma, porque no guardaba nada.
+SELECT count(*) AS cuantas_veces_se_escaneo,
+       count(*) FILTER (WHERE state = 'holds')  AS veces_limpia,
+       count(*) FILTER (WHERE state = 'broken') AS veces_con_brecha
+  FROM living_assertions.checks c
+  JOIN living_assertions.assertions a ON a.id = c.assertion
+ WHERE a.name = 'promises:pgd2';
+ cuantas_veces_se_escaneo | veces_limpia | veces_con_brecha 
+--------------------------+--------------+------------------
+                        2 |            1 |                1
 (1 row)
 
 DROP SCHEMA pgd CASCADE;
@@ -155,3 +218,4 @@ drop cascades to table pgd.tenant_data
 DROP SCHEMA pgd2 CASCADE;
 NOTICE:  drop cascades to table pgd2.t
 DROP EXTENSION pg_promise_guard;
+DROP EXTENSION pg_living_assertions CASCADE;

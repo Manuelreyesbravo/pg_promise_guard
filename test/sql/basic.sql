@@ -11,7 +11,9 @@
 -- every edit of the SQL, and the test would break on cosmetic changes.
 \set SHOW_CONTEXT never
 
-CREATE EXTENSION pg_promise_guard;
+-- CASCADE porque desde 0.2.0 watch() apoya en pg_living_assertions: leer el
+-- catalogo sigue siendo trabajo de esta extension, RECORDAR que lo leiste no.
+CREATE EXTENSION pg_promise_guard CASCADE;
 
 CREATE SCHEMA pgd;
 
@@ -87,6 +89,7 @@ SELECT promises_kept('pgd') AS promesas_cumplidas;
 -- silenced -- taking the real breaches with it.
 CREATE SCHEMA pgd2;
 CREATE TABLE pgd2.t (id int, monto numeric);
+CREATE UNIQUE INDEX t_id_uk ON pgd2.t (id);
 INSERT INTO pgd2.t VALUES (1, -1);
 ALTER TABLE pgd2.t ADD CONSTRAINT m_pos CHECK (monto > 0) NOT VALID;
 SELECT count(*) AS solo_gaps FROM check_promises('pgd2');
@@ -98,6 +101,49 @@ ALTER TABLE pgd.facturas ENABLE TRIGGER audita;
 SELECT count(*) AS triggers_apagados FROM check_promises('pgd')
 WHERE kind = 'disabled_trigger';
 
+-- ===========================================================================
+-- 0.2.0 -- LA MEMORIA DEL ESCANER
+--
+-- Todo lo de arriba contesta "que esta roto AHORA". Las tres preguntas que un
+-- escaner sin estado NO puede contestar, y que deciden el criterio declarado
+-- en yggdrasil sql/064 antes de escribir este port:
+--   1. cuando se escaneo por ultima vez
+--   2. que dijo la vez anterior
+--   3. si alguien lo escaneo alguna vez
+-- La tercera es la que importa: sin estado, "limpio" y "nadie lo miro" dan el
+-- MISMO resultado vacio, y un resultado vacio se lee como alta medica.
+-- ===========================================================================
+
+-- PREGUNTA 3, en la direccion que nadie prueba: antes de registrar nada, la
+-- respuesta no es "limpio", es "no hay nada vigilando".
+SELECT living_assertions.state('promises:pgd2') AS antes_de_vigilar;
+
+SELECT promise_guard.watch('pgd2') > 0 AS vigilada;
+SELECT living_assertions.state('promises:pgd2') AS con_solo_un_gap;
+
+-- PREGUNTA 1: la edad viaja con el veredicto.
+SELECT name, state, age IS NOT NULL AS trae_su_edad
+  FROM living_assertions.status WHERE name = 'promises:pgd2';
+
+-- El escaner encuentra una BRECHA de verdad: un indice UNIQUE invalido es
+-- exactamente el caso del encabezado -- el catalogo dice UNIQUE y los
+-- duplicados entran sin un error ni una linea de log.
+UPDATE pg_index SET indisvalid = false
+ WHERE indexrelid = 'pgd2.t_id_uk'::regclass;
+
+SELECT living_assertions.run('promises:pgd2') IS NOT NULL AS re_escaneada;
+SELECT state, detail FROM living_assertions.status WHERE name = 'promises:pgd2';
+
+-- PREGUNTA 2: que dijo la vez anterior. Esto es lo que 0.1.0 no podia contestar
+-- de ninguna forma, porque no guardaba nada.
+SELECT count(*) AS cuantas_veces_se_escaneo,
+       count(*) FILTER (WHERE state = 'holds')  AS veces_limpia,
+       count(*) FILTER (WHERE state = 'broken') AS veces_con_brecha
+  FROM living_assertions.checks c
+  JOIN living_assertions.assertions a ON a.id = c.assertion
+ WHERE a.name = 'promises:pgd2';
+
 DROP SCHEMA pgd CASCADE;
 DROP SCHEMA pgd2 CASCADE;
 DROP EXTENSION pg_promise_guard;
+DROP EXTENSION pg_living_assertions CASCADE;

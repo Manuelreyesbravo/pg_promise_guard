@@ -1,8 +1,8 @@
 {
    "name": "pg_promise_guard",
    "abstract": "Find the guarantees your schema claims and silently stopped enforcing",
-   "description": "A migration runs CREATE UNIQUE INDEX CONCURRENTLY, it fails on duplicates that were already in the table, and it leaves the index behind — marked unique, marked invalid. From that moment the catalog says UNIQUE, your ORM says unique, your application assumes unique, and nothing is enforced: duplicates keep going in with no error, no log line and no alert. The failure was loud exactly once, in a deploy log nobody reads twice; the broken state it leaves behind is silent forever. pg_promise_guard reports every guarantee a database advertises and is not keeping: invalid unique indexes, NOT VALID constraints that never covered the rows already there, triggers disabled for a bulk load and never re-enabled, and row level security that is enabled but not forced so the table owner bypasses every policy. It separates a breach — something stated and not being enforced right now, where wrong data can be entering — from a gap, which is a deliberate mid-migration state, because a monitor that goes red on purpose gets silenced and takes the real breaches with it. This is not corruption, so amcheck does not see it: amcheck verifies that a valid index is structurally sound, and these indexes are structurally perfect and simply not in effect. Reads only the system catalogs: no user data, no locks, no dependencies and no shared library.",
-   "version": "0.1.0",
+   "description": "A migration runs CREATE UNIQUE INDEX CONCURRENTLY, it fails on duplicates that were already in the table, and it leaves the index behind \u2014 marked unique, marked invalid. From that moment the catalog says UNIQUE, your ORM says unique, your application assumes unique, and nothing is enforced: duplicates keep going in with no error, no log line and no alert. The failure was loud exactly once, in a deploy log nobody reads twice; the broken state it leaves behind is silent forever. pg_promise_guard reports every guarantee a database advertises and is not keeping: invalid unique indexes, NOT VALID constraints that never covered the rows already there, triggers disabled for a bulk load and never re-enabled, and row level security that is enabled but not forced so the table owner bypasses every policy. It separates a breach \u2014 something stated and not being enforced right now, where wrong data can be entering \u2014 from a gap, which is a deliberate mid-migration state, because a monitor that goes red on purpose gets silenced and takes the real breaches with it. This is not corruption, so amcheck does not see it: amcheck verifies that a valid index is structurally sound, and these indexes are structurally perfect and simply not in effect. Reads only the system catalogs: no user data, no locks, no dependencies and no shared library.",
+   "version": "0.2.0",
    "maintainer": [
       "Manuel Reyes <manuelreyesbravo@gmail.com>"
    ],
@@ -10,15 +10,16 @@
    "provides": {
       "pg_promise_guard": {
          "abstract": "Report constraints, indexes, triggers and RLS that stopped being enforced",
-         "file": "pg_promise_guard--0.1.0.sql",
+         "file": "pg_promise_guard--0.2.0.sql",
          "docfile": "README.md",
-         "version": "0.1.0"
+         "version": "0.2.0"
       }
    },
    "prereqs": {
       "runtime": {
          "requires": {
-            "PostgreSQL": "13.0.0"
+            "PostgreSQL": "13.0.0",
+            "pg_living_assertions": "0.1.0"
          }
       }
    },
