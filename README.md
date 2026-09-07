@@ -101,6 +101,39 @@ gone (the duplicate goes in; the audit row is missing) and that the extension
 says so. It also asserts that a healthy schema reports **nothing**: a checker
 that always finds something gets ignored, and then it is not a checker.
 
+## 0.2.0 -- the scan gets a memory
+
+Everything above answers *what is broken right now*. Run it, get a list; run it
+tomorrow, get another list, with no way to tell whether anything changed, when it
+was last looked at, or whether anyone has **ever** looked.
+
+That last one matters most: in a scanner with no state, "this schema is clean"
+and "nobody has scanned this schema" produce the same empty result -- and an
+empty result reads as a clean bill of health.
+
+```sql
+SELECT promise_guard.watch('public');       -- register the scan
+SELECT * FROM living_assertions.status;      -- verdict AND how old it is
+```
+
+This extension still keeps **no state of its own** -- reading the catalog is its
+job, remembering that you read it is not. That belongs to
+[`pg_living_assertions`](https://pgxn.org/dist/pg_living_assertions/), which
+0.2.0 requires. Only `breach` decides the verdict, for the same reason
+`promises_kept()` ignores gaps: a check that is red on purpose gets silenced,
+and takes the real ones with it.
+
+### A latent defect fixed in 0.2.0
+
+`check_promises()` and `promises_kept()` did not set their own `search_path`, so
+they resolved through the **caller's** -- meaning they only worked from a session
+that already had the schema in scope. A cron job, a monitoring role or a
+`SECURITY DEFINER` context got `function check_promises(text) does not exist`,
+and an unqualified name can also resolve to something a user planted earlier in
+their path. Every test missed it because every test called them from a session
+that had the schema in scope; it surfaced the first time the function ran under
+somebody else's `search_path`.
+
 ## License
 
 PostgreSQL License.
