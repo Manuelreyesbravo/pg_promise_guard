@@ -88,6 +88,19 @@ Declared here rather than hidden in the version number:
   why `META.json` claims 13, but versions below 18 are **untested** and that is
   stated here rather than implied by the version number.
 
+## Tested on
+
+Measured on 2026-09-16, not assumed: `make installcheck` was run against each
+of these releases, every one in a container of the official image for that
+version (19beta2 is a local build).
+
+| 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 |
+|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| ✗  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  | ✓  |
+
+PostgreSQL 10 is out because pg_living_assertions, which this extension needs,
+requires 11.
+
 ## Tests
 
 ```sh

@@ -15,6 +15,11 @@
 -- catalogo sigue siendo trabajo de esta extension, RECORDAR que lo leiste no.
 CREATE EXTENSION pg_promise_guard CASCADE;
 
+-- The extension installs into its own schema (see the .control), so without
+-- this every call below resolves to nothing and the suite would pass while
+-- testing none of the detection.
+SET search_path = promise_guard, public;
+
 CREATE SCHEMA pgd;
 
 -- ===========================================================================
