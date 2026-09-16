@@ -14,6 +14,10 @@
 -- catalogo sigue siendo trabajo de esta extension, RECORDAR que lo leiste no.
 CREATE EXTENSION pg_promise_guard CASCADE;
 NOTICE:  installing required extension "pg_living_assertions"
+-- The extension installs into its own schema (see the .control), so without
+-- this every call below resolves to nothing and the suite would pass while
+-- testing none of the detection.
+SET search_path = promise_guard, public;
 CREATE SCHEMA pgd;
 -- ===========================================================================
 -- A clean schema must be silent.
@@ -22,15 +26,17 @@ CREATE TABLE pgd.ok (id int PRIMARY KEY, v text NOT NULL);
 CREATE UNIQUE INDEX ok_v ON pgd.ok (v);
 ALTER TABLE pgd.ok ADD CONSTRAINT v_no_vacio CHECK (v <> '');
 SELECT count(*) AS hallazgos_en_esquema_sano FROM check_promises('pgd');
-ERROR:  function check_promises(unknown) does not exist
-LINE 1: SELECT count(*) AS hallazgos_en_esquema_sano FROM check_prom...
-                                                          ^
-DETAIL:  A function of that name exists, but it is not in the search_path.
+ hallazgos_en_esquema_sano 
+---------------------------
+                         0
+(1 row)
+
 SELECT promises_kept('pgd') AS promesas_cumplidas;
-ERROR:  function promises_kept(unknown) does not exist
-LINE 1: SELECT promises_kept('pgd') AS promesas_cumplidas;
-               ^
-DETAIL:  A function of that name exists, but it is not in the search_path.
+ promesas_cumplidas 
+--------------------
+ t
+(1 row)
+
 -- ===========================================================================
 -- PROMISE 1: "this column is unique"
 -- ===========================================================================
@@ -50,10 +56,11 @@ SELECT count(*) AS filas_con_el_mismo_rut FROM pgd.clientes WHERE rut = 'dup';
 (1 row)
 
 SELECT kind, object, severity FROM check_promises('pgd') ORDER BY kind, object;
-ERROR:  function check_promises(unknown) does not exist
-LINE 1: SELECT kind, object, severity FROM check_promises('pgd') ORD...
-                                           ^
-DETAIL:  A function of that name exists, but it is not in the search_path.
+         kind         |       object        | severity 
+----------------------+---------------------+----------
+ invalid_unique_index | pgd.clientes_rut_uk | breach
+(1 row)
+
 -- ===========================================================================
 -- PROMISE 2: "this CHECK is guaranteed"
 -- ===========================================================================
@@ -101,15 +108,20 @@ CREATE POLICY solo_lo_mio ON pgd.tenant_data
 -- ===========================================================================
 SELECT kind, object, relation, severity FROM check_promises('pgd')
 ORDER BY severity, kind, object;
-ERROR:  function check_promises(unknown) does not exist
-LINE 1: SELECT kind, object, relation, severity FROM check_promises(...
-                                                     ^
-DETAIL:  A function of that name exists, but it is not in the search_path.
+         kind         |       object        |    relation     | severity 
+----------------------+---------------------+-----------------+----------
+ disabled_trigger     | pgd.audita          | pgd.facturas    | breach
+ invalid_unique_index | pgd.clientes_rut_uk | pgd.clientes    | breach
+ unenforced_rls       | pgd.tenant_data     | pgd.tenant_data | breach
+ not_valid_constraint | pgd.monto_positivo  | pgd.facturas    | gap
+(4 rows)
+
 SELECT promises_kept('pgd') AS promesas_cumplidas;
-ERROR:  function promises_kept(unknown) does not exist
-LINE 1: SELECT promises_kept('pgd') AS promesas_cumplidas;
-               ^
-DETAIL:  A function of that name exists, but it is not in the search_path.
+ promesas_cumplidas 
+--------------------
+ f
+(1 row)
+
 -- A gap alone must NOT turn the monitor red: a NOT VALID constraint is a
 -- legitimate mid-migration state, and a check that is red on purpose gets
 -- silenced -- taking the real breaches with it.
@@ -119,24 +131,27 @@ CREATE UNIQUE INDEX t_id_uk ON pgd2.t (id);
 INSERT INTO pgd2.t VALUES (1, -1);
 ALTER TABLE pgd2.t ADD CONSTRAINT m_pos CHECK (monto > 0) NOT VALID;
 SELECT count(*) AS solo_gaps FROM check_promises('pgd2');
-ERROR:  function check_promises(unknown) does not exist
-LINE 1: SELECT count(*) AS solo_gaps FROM check_promises('pgd2');
-                                          ^
-DETAIL:  A function of that name exists, but it is not in the search_path.
+ solo_gaps 
+-----------
+         1
+(1 row)
+
 SELECT promises_kept('pgd2') AS sigue_verde_con_un_gap;
-ERROR:  function promises_kept(unknown) does not exist
-LINE 1: SELECT promises_kept('pgd2') AS sigue_verde_con_un_gap;
-               ^
-DETAIL:  A function of that name exists, but it is not in the search_path.
+ sigue_verde_con_un_gap 
+------------------------
+ t
+(1 row)
+
 -- Fixing the promise must clear the finding: a checker that keeps complaining
 -- after the fix is a checker that gets turned off.
 ALTER TABLE pgd.facturas ENABLE TRIGGER audita;
 SELECT count(*) AS triggers_apagados FROM check_promises('pgd')
 WHERE kind = 'disabled_trigger';
-ERROR:  function check_promises(unknown) does not exist
-LINE 1: SELECT count(*) AS triggers_apagados FROM check_promises('pg...
-                                                  ^
-DETAIL:  A function of that name exists, but it is not in the search_path.
+ triggers_apagados 
+-------------------
+                 0
+(1 row)
+
 -- ===========================================================================
 -- 0.2.0 -- LA MEMORIA DEL ESCANER
 --
