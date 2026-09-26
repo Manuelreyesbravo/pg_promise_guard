@@ -53,4 +53,7 @@ $$;
 
 COMMENT ON FUNCTION watch(text) IS
     'Registers the breach scan for this schema as a living assertion, so it '
-    'carries the date it was last run and what it said last time.';
+    'carries the date it was last run and what it said last time. Only breaches '
+    'decide the verdict -- a deliberate gap mid-migration must not turn it red, '
+    'for the same reason promises_kept() ignores them. The gaps still show in '
+    'check_promises(), where they belong.';
