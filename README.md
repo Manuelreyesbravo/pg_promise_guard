@@ -1,5 +1,7 @@
 # pg_promise_guard
 
+[![CI](https://github.com/Manuelreyesbravo/pg_promise_guard/actions/workflows/ci.yml/badge.svg)](https://github.com/Manuelreyesbravo/pg_promise_guard/actions/workflows/ci.yml)
+
 Finds the guarantees your schema **claims** to give and silently stopped giving.
 
 ```sql
