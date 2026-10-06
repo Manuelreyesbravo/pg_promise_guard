@@ -1,3 +1,6 @@
+-- Copyright 2026 Manuel Reyes Bravo
+-- SPDX-License-Identifier: PostgreSQL
+
 -- pg_promise_guard 0.2.0
 --
 -- Finds the guarantees your schema claims to give and silently stopped giving.
