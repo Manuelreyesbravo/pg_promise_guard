@@ -5,7 +5,8 @@ DATA         = pg_promise_guard--0.1.0.sql \
                pg_promise_guard--0.2.0--0.2.1.sql \
                pg_promise_guard--0.2.1--0.2.2.sql \
                pg_promise_guard--0.2.2--0.2.3.sql \
-               pg_promise_guard--0.2.3--0.2.4.sql
+               pg_promise_guard--0.2.3--0.2.4.sql \
+               pg_promise_guard--0.2.4--0.2.5.sql
 PG_CONFIG   ?= pg_config
 
 # Un solo installcheck y sin dependencias: la extensión lee únicamente los
@@ -18,6 +19,12 @@ REGRESS_OPTS = --inputdir=test --outputdir=test
 # Can a temporary table of the session that evaluates hide a broken promise? It
 # could, through pg_temp, until 0.2.4. Needs a second role, so it is not part of
 # installcheck; run it against the throwaway cluster of test/cluster.sh.
+# Does an installation that began at 0.1.0 (in public, before the schema was fixed)
+# reach the current version and work? ci/upgrade_check.sh cannot see it.
+.PHONY: check-desde-010
+check-desde-010:
+	@PG_CONFIG=$(PG_CONFIG) bash ./test/desde_010.sh
+
 .PHONY: check-pgtemp
 check-pgtemp:
 	@PG_CONFIG=$(PG_CONFIG) bash ./test/pg_temp.sh

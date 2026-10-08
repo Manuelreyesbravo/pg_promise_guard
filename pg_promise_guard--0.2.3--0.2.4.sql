@@ -21,6 +21,10 @@
 
 \echo Use "ALTER EXTENSION pg_promise_guard UPDATE TO '0.2.4'" to load this file. \quit
 
-ALTER FUNCTION promise_guard.check_promises(text) SET search_path = promise_guard, pg_catalog, pg_temp;
-ALTER FUNCTION promise_guard.promises_kept(text) SET search_path = promise_guard, pg_catalog, pg_temp;
-ALTER FUNCTION promise_guard.watch(text) SET search_path = promise_guard, pg_catalog, pg_temp;
+-- @extschema@, not a literal: an installation that began at 0.1.0 -- before the control file
+-- fixed the schema -- lives in another one (usually public). The first cut of this script named
+-- promise_guard and failed there; ALTER EXTENSION runs in one transaction, so nothing was left
+-- half-applied (found upgrading a real database, fixed in 0.2.5 and here).
+ALTER FUNCTION @extschema@.check_promises(text) SET search_path = @extschema@, pg_catalog, pg_temp;
+ALTER FUNCTION @extschema@.promises_kept(text) SET search_path = @extschema@, pg_catalog, pg_temp;
+ALTER FUNCTION @extschema@.watch(text) SET search_path = @extschema@, pg_catalog, pg_temp;

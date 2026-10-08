@@ -4,7 +4,23 @@ Versions are released on [PGXN](https://pgxn.org/dist/pg_promise_guard/). Each
 upgrade script (`pg_promise_guard--OLD--NEW.sql`) documents, in its own header,
 exactly what changed and why; that is the authoritative per-version record.
 
-## 0.2.4 -- unreleased
+## 0.2.5 -- unreleased
+
+* **An installation that began at 0.1.0 can upgrade, and its `watch()` works.**
+  0.1.0 fixed no schema, so it was installed wherever the caller said -- usually
+  `public`; 0.2.0 fixed `schema = promise_guard` for new installations only. The
+  0.2.3 -> 0.2.4 script named `promise_guard` literally and failed there with
+  `schema "promise_guard" does not exist` (found upgrading a real database; the
+  failure was all or nothing). The script now says `@extschema@`, as the
+  0.1.0 -> 0.2.0 script always did. `watch()` is recreated naming the schema the
+  extension is in: the published 0.2.0 already did, and this normalizes a
+  `watch()` from a pre-release build that named `promise_guard` literally.
+  `test/desde_010.sh` (`make check-desde-010`) reproduces the origin -- 0.1.0
+  installed with its own control file, then updated -- which
+  `ci/upgrade_check.sh` cannot, since it installs every old version with the
+  current control file.
+
+## 0.2.4 -- 2026-10-08
 
 * **A temporary table of the session that evaluates a promise can no longer hide
   a broken one.** `check_promises()` reads the catalog without a schema under
