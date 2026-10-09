@@ -6,7 +6,8 @@ DATA         = pg_promise_guard--0.1.0.sql \
                pg_promise_guard--0.2.1--0.2.2.sql \
                pg_promise_guard--0.2.2--0.2.3.sql \
                pg_promise_guard--0.2.3--0.2.4.sql \
-               pg_promise_guard--0.2.4--0.2.5.sql
+               pg_promise_guard--0.2.4--0.2.5.sql \
+               pg_promise_guard--0.2.5--0.2.6.sql
 PG_CONFIG   ?= pg_config
 
 # Un solo installcheck y sin dependencias: la extensión lee únicamente los

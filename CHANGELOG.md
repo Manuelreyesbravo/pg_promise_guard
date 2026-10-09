@@ -4,7 +4,13 @@ Versions are released on [PGXN](https://pgxn.org/dist/pg_promise_guard/). Each
 upgrade script (`pg_promise_guard--OLD--NEW.sql`) documents, in its own header,
 exactly what changed and why; that is the authoritative per-version record.
 
-## 0.2.5 -- unreleased
+## 0.2.6 -- 2026-10-08
+
+* **Metadata only.** The PGXN description is two sentences now; the longer
+  explanation it carried is in this README. No code changed: the upgrade
+  script 0.2.5 -> 0.2.6 changes no object.
+
+## 0.2.5 -- 2026-10-08
 
 * **An installation that began at 0.1.0 can upgrade, and its `watch()` works.**
   0.1.0 fixed no schema, so it was installed wherever the caller said -- usually
