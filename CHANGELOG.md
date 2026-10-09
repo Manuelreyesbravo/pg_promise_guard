@@ -36,7 +36,7 @@ The Medium and Low findings of the external audit of 0.2.5, each measured on 0.2
   role allowed to create there -- the default before PostgreSQL 15 -- added empty
   `public.pg_trigger` and `public.pg_index`: `check_promises()` found nothing,
   `promises_kept()` said true, and the watched assertion recorded `holds` over a
-  disabled trigger (measured on 0.2.6, `test/desde_010.sh`). Every function now searches
+  disabled trigger (measured on 0.2.6, `test/from_010.sh`). Every function now searches
   `pg_catalog` first; `watch()` qualifies what its check calls and declares it under that
   path. Watches declared before 0.2.7 keep their old path: the upgrade names them, and
   retiring and watching again moves them.
@@ -58,7 +58,7 @@ The Medium and Low findings of the external audit of 0.2.5, each measured on 0.2
   0.1.0 -> 0.2.0 script always did. `watch()` is recreated naming the schema the
   extension is in: the published 0.2.0 already did, and this normalizes a
   `watch()` from a pre-release build that named `promise_guard` literally.
-  `test/desde_010.sh` (`make check-desde-010`) reproduces the origin -- 0.1.0
+  `test/from_010.sh` (`make check-from-010`) reproduces the origin -- 0.1.0
   installed with its own control file, then updated -- which
   `ci/upgrade_check.sh` cannot, since it installs every old version with the
   current control file.

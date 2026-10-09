@@ -24,13 +24,13 @@ set -euo pipefail
 
 PG_CONFIG=${PG_CONFIG:-pg_config}
 PSQL=${PSQL:-$("$PG_CONFIG" --bindir)/psql}
-RAIZ=$(cd "$(dirname "$0")/.." && pwd)
-export PGHOST=${PGHOST:-$RAIZ/.testcluster} PGPORT=${PGPORT:-5495}
-BASE=promise_guard_test_pg_temp
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+export PGHOST=${PGHOST:-$ROOT/.testcluster} PGPORT=${PGPORT:-5495}
+DB=promise_guard_test_pg_temp
 OTHER=promise_guard_test_pg_temp_other
 failures=0
 
-for what in "database:$BASE" "role:$OTHER"; do
+for what in "database:$DB" "role:$OTHER"; do
     kind=${what%%:*}; name=${what#*:}
     q="select 1 from pg_database where datname = '$name'"
     [ "$kind" = role ] && q="select 1 from pg_roles where rolname = '$name'"
@@ -39,10 +39,10 @@ for what in "database:$BASE" "role:$OTHER"; do
         exit 2
     fi
 done
-trap '$PSQL -X -d postgres -qc "drop database if exists $BASE" -c "drop role if exists $OTHER" >/dev/null 2>&1 || true' EXIT
-$PSQL -X -d postgres -qc "create database $BASE" -c "create role $OTHER login"
+trap '$PSQL -X -d postgres -qc "drop database if exists $DB" -c "drop role if exists $OTHER" >/dev/null 2>&1 || true' EXIT
+$PSQL -X -d postgres -qc "create database $DB" -c "create role $OTHER login"
 
-$PSQL -X -d "$BASE" -q -v ON_ERROR_STOP=1 -v other="$OTHER" >/dev/null <<'SQL'
+$PSQL -X -d "$DB" -q -v ON_ERROR_STOP=1 -v other="$OTHER" >/dev/null <<'SQL'
 CREATE EXTENSION pg_promise_guard CASCADE;
 CREATE SCHEMA app;
 CREATE TABLE app.orders (id int);
@@ -72,21 +72,21 @@ check() {
 }
 
 check "without a temporary table, the disabled trigger reads as a broken promise" "broken" \
-    "$(PGUSER=$OTHER $PSQL -X -d "$BASE" -tAc "select evaluate('promises:app')" 2>&1 || true)"
+    "$(PGUSER=$OTHER $PSQL -X -d "$DB" -tAc "select evaluate('promises:app')" 2>&1 || true)"
 
 # THE CASE: the same session keeps an empty pg_temp.pg_trigger and asks again.
 check "a temporary pg_trigger in the evaluating session does NOT hide it" "broken" \
-    "$(PGUSER=$OTHER $PSQL -X -d "$BASE" -tA \
+    "$(PGUSER=$OTHER $PSQL -X -d "$DB" -tA \
         -c "create temp table pg_trigger (tgrelid oid, tgname name, tgenabled \"char\", tgisinternal bool)" \
         -c "select evaluate('promises:app')" 2>&1 || true)"
 
 check "nor a temporary pg_class" "broken" \
-    "$(PGUSER=$OTHER $PSQL -X -d "$BASE" -tA \
+    "$(PGUSER=$OTHER $PSQL -X -d "$DB" -tA \
         -c "create temp table pg_class (oid oid, relname name, relnamespace oid, relrowsecurity bool, relforcerowsecurity bool)" \
         -c "select evaluate('promises:app')" 2>&1 || true)"
 
 check "and the owner, in its own session, still sees it" "f" \
-    "$($PSQL -X -d "$BASE" -tAc "select promise_guard.promises_kept('app')" 2>&1 || true)"
+    "$($PSQL -X -d "$DB" -tAc "select promise_guard.promises_kept('app')" 2>&1 || true)"
 
 if [ "$failures" -ne 0 ]; then
     echo "$failures check(s) failed"

@@ -24,12 +24,12 @@
 -- Found by putting this extension on pg_living_assertions, whose evaluator runs
 -- the stored check under its own search_path. No test had caught it because
 -- every test called these from a session that had the schema in scope.
--- @extschema@ y NO el nombre del esquema escrito a mano. Esto lo destapo la
--- instalacion REAL: en esa base pg_promise_guard vive en `public`, no en
--- `promise_guard`, asi que fijar el search_path al nombre literal dejo a
--- promises_kept() buscando en un esquema que no existe -- y la primera version
--- de este upgrade ROMPIO una instalacion que antes funcionaba. Arreglar el
--- search_path con el nombre equivocado es peor que no arreglarlo.
+-- @extschema@ and NOT the schema name written by hand. The REAL installation
+-- exposed this: in that database pg_promise_guard lives in `public`, not in
+-- `promise_guard`, so pinning the search_path to the literal name left
+-- promises_kept() searching a schema that does not exist -- and the first version
+-- of this upgrade BROKE an installation that used to work. Fixing the
+-- search_path with the wrong name is worse than not fixing it.
 ALTER FUNCTION check_promises(text) SET search_path = @extschema@, pg_catalog;
 ALTER FUNCTION promises_kept(text)  SET search_path = @extschema@, pg_catalog;
 

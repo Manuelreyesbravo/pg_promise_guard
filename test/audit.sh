@@ -20,8 +20,8 @@ set -euo pipefail
 
 PG_CONFIG=${PG_CONFIG:-pg_config}
 PSQL=${PSQL:-$("$PG_CONFIG" --bindir)/psql}
-RAIZ=$(cd "$(dirname "$0")/.." && pwd)
-export PGHOST=${PGHOST:-$RAIZ/.testcluster} PGPORT=${PGPORT:-5495}
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+export PGHOST=${PGHOST:-$ROOT/.testcluster} PGPORT=${PGPORT:-5495}
 DB=promise_guard_test_audit
 TENANT=promise_guard_test_audit_tenant
 OWNER=promise_guard_test_audit_owner

@@ -10,12 +10,12 @@ CREATE EXTENSION pg_promise_guard;
 SELECT * FROM promise_breaks;
 ```
 ```
-         kind         |       object        |   relation   | severity
-----------------------+---------------------+--------------+----------
- invalid_unique_index | app.clientes_rut_uk | app.clientes | breach
- disabled_trigger     | app.audita          | app.facturas | breach
- unenforced_rls       | app.tenant_data     | app.tenant_data | breach
- not_valid_constraint | app.monto_positivo  | app.facturas | gap
+         kind         |         object          |    relation     | severity
+----------------------+-------------------------+-----------------+----------
+ invalid_unique_index | app.customers_tax_id_uk | app.customers   | breach
+ disabled_trigger     | app.audit_insert        | app.invoices    | breach
+ unenforced_rls       | app.tenant_data         | app.tenant_data | breach
+ not_valid_constraint | app.amount_positive     | app.invoices    | gap
 ```
 
 ## The failure it exists for
@@ -75,7 +75,7 @@ It reads the catalog it means to read. Since 0.2.7 every function searches
 `pg_catalog` first: until 0.2.6 the extension's own schema came first, and in an
 installation that began at 0.1.0 that schema is `public`, where a role allowed to
 create could add an empty `public.pg_trigger` and blind the scanner (external
-audit; `test/desde_010.sh`).
+audit; `test/from_010.sh`).
 
 **What it reports, since 0.2.8.** Beyond invalid indexes, NOT VALID constraints,
 disabled triggers and RLS that is not forced: NOT ENFORCED constraints

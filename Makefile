@@ -12,10 +12,10 @@ DATA         = pg_promise_guard--0.1.0.sql \
                pg_promise_guard--0.2.7--0.2.8.sql
 PG_CONFIG   ?= pg_config
 
-# Un solo installcheck y sin dependencias: la extensión lee únicamente los
-# catálogos del sistema, así que la prueba corre en cualquier PostgreSQL. Es la
-# lección de pg_recall_guard aplicada desde el día uno — un installcheck que
-# falla por algo que el usuario no tiene entrena a ignorarlo.
+# One installcheck and no dependencies: the extension reads only the system
+# catalogs, so the test runs on any PostgreSQL. It is the lesson of
+# pg_recall_guard applied from day one -- an installcheck that fails because of
+# something the user does not have trains the user to ignore it.
 REGRESS      = basic
 REGRESS_OPTS = --inputdir=test --outputdir=test
 
@@ -24,9 +24,9 @@ REGRESS_OPTS = --inputdir=test --outputdir=test
 # installcheck; run it against the throwaway cluster of test/cluster.sh.
 # Does an installation that began at 0.1.0 (in public, before the schema was fixed)
 # reach the current version and work? ci/upgrade_check.sh cannot see it.
-.PHONY: check-desde-010
-check-desde-010:
-	@PG_CONFIG=$(PG_CONFIG) bash ./test/desde_010.sh
+.PHONY: check-from-010
+check-from-010:
+	@PG_CONFIG=$(PG_CONFIG) bash ./test/from_010.sh
 
 .PHONY: check-pgtemp
 check-pgtemp:
@@ -41,7 +41,7 @@ check-audit:
 # stopped afterwards, whatever the suites answered. PostgreSQL 18 or later: the
 # cluster loads this checkout through extension_control_path. CI runs exactly
 # this on 18 and 19.
-SUITES = check-pgtemp check-desde-010 check-audit
+SUITES = check-pgtemp check-from-010 check-audit
 .PHONY: check-suites
 check-suites:
 	@PG_CONFIG=$(PG_CONFIG) bash ./test/cluster.sh init
