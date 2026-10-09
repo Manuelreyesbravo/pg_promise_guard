@@ -4,6 +4,30 @@ Versions are released on [PGXN](https://pgxn.org/dist/pg_promise_guard/). Each
 upgrade script (`pg_promise_guard--OLD--NEW.sql`) documents, in its own header,
 exactly what changed and why; that is the authoritative per-version record.
 
+## 0.2.8 -- 2026-10-09
+
+The Medium and Low findings of the external audit of 0.2.5, each measured on 0.2.7 first
+(`test/audit.sh`, in `make check-suites`: every tooth red there with its control green).
+
+* **PG-02:** only objects of an extension owned by a superuser are skipped, in every branch; a
+  tenant hid `unenforced_rls` by adding its table to an extension it created.
+* **PG-03:** a NOT ENFORCED constraint (PostgreSQL 18) is a breach, `not_enforced_constraint`.
+* **PG-04:** a trigger that fires only in replica mode is a gap; a disabled foreign-key trigger is
+  a breach.
+* **PG-05:** a policy on a table without RLS, a disabled rule and a disabled event trigger are
+  breaches; a NOT VALID domain constraint is a gap.
+* **PG-06:** a schema that does not exist raises, in `check_promises()`, `promises_kept()` and
+  `watch()`; it read "no breaches".
+* **PG-07:** it refuses outside READ COMMITTED: under REPEATABLE READ it read an old catalog and the
+  assertion recorded `holds` after a breach.
+* **PG-08:** an index being built (PostgreSQL 12+) is a gap, not a breach on every deploy.
+* **PG-09:** a UNIQUE index invalid but ready is a gap that says new rows are checked. A
+  `CREATE UNIQUE INDEX CONCURRENTLY` that fails on duplicates leaves both flags false (measured:
+  duplicates go in), and stays a breach; the regression test now reproduces that state.
+* **PG-10:** RLS not forced is a gap when the owner cannot log in.
+* **PG-11:** `watch()` of a schema already watched returns its assertion.
+* Object names are quoted identifiers.
+
 ## 0.2.7 -- 2026-10-09
 
 * **The scanner reads the real catalog, whatever schema the extension lives in (PG-01,

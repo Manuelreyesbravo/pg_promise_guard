@@ -8,7 +8,8 @@ DATA         = pg_promise_guard--0.1.0.sql \
                pg_promise_guard--0.2.3--0.2.4.sql \
                pg_promise_guard--0.2.4--0.2.5.sql \
                pg_promise_guard--0.2.5--0.2.6.sql \
-               pg_promise_guard--0.2.6--0.2.7.sql
+               pg_promise_guard--0.2.6--0.2.7.sql \
+               pg_promise_guard--0.2.7--0.2.8.sql
 PG_CONFIG   ?= pg_config
 
 # Un solo installcheck y sin dependencias: la extensión lee únicamente los
@@ -31,11 +32,16 @@ check-desde-010:
 check-pgtemp:
 	@PG_CONFIG=$(PG_CONFIG) bash ./test/pg_temp.sh
 
+# The Medium and Low findings of the external audit of 0.2.5, each against its control.
+.PHONY: check-audit
+check-audit:
+	@PG_CONFIG=$(PG_CONFIG) bash ./test/audit.sh
+
 # Every suite in SUITES, in a throwaway cluster built from PG_CONFIG's binaries and
 # stopped afterwards, whatever the suites answered. PostgreSQL 18 or later: the
 # cluster loads this checkout through extension_control_path. CI runs exactly
 # this on 18 and 19.
-SUITES = check-pgtemp check-desde-010
+SUITES = check-pgtemp check-desde-010 check-audit
 .PHONY: check-suites
 check-suites:
 	@PG_CONFIG=$(PG_CONFIG) bash ./test/cluster.sh init

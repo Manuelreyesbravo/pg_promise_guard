@@ -68,7 +68,7 @@ SELECT * FROM check_promises('app');
 ## Cost
 
 Reads the system catalogs only. No user data, no locks, no dependencies, no
-shared library — it is one SQL function. Safe to run on a busy production
+shared library; it needs pg_living_assertions only for `watch()`. Safe to run on a busy production
 database and cheap enough to run every minute.
 
 It reads the catalog it means to read. Since 0.2.7 every function searches
@@ -76,6 +76,18 @@ It reads the catalog it means to read. Since 0.2.7 every function searches
 installation that began at 0.1.0 that schema is `public`, where a role allowed to
 create could add an empty `public.pg_trigger` and blind the scanner (external
 audit; `test/desde_010.sh`).
+
+**What it reports, since 0.2.8.** Beyond invalid indexes, NOT VALID constraints,
+disabled triggers and RLS that is not forced: NOT ENFORCED constraints
+(PostgreSQL 18) and disabled foreign-key triggers are breaches, as are a policy on
+a table without row level security, a disabled rule and a disabled event trigger.
+A trigger that fires only in replica mode, a NOT VALID domain constraint, a UNIQUE
+index that is invalid but ready (new rows are checked), an index being built right
+now, and RLS not forced on a table whose owner cannot log in are gaps. Objects of an
+extension owned by a superuser are skipped; an extension a tenant owns is not. It
+runs under READ COMMITTED only, and a schema that does not exist is an error, not a
+clean bill of health. What it cannot see: `session_replication_role = replica` set by
+a superuser skips triggers and foreign keys without leaving anything in the catalog.
 
 ## What it does NOT do
 

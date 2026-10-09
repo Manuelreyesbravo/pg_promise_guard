@@ -133,7 +133,10 @@ SELECT name, state, age IS NOT NULL AS trae_su_edad
 -- El escaner encuentra una BRECHA de verdad: un indice UNIQUE invalido es
 -- exactamente el caso del encabezado -- el catalogo dice UNIQUE y los
 -- duplicados entran sin un error ni una linea de log.
-UPDATE pg_index SET indisvalid = false
+-- Both flags, as a CREATE UNIQUE INDEX CONCURRENTLY that failed on duplicates leaves them
+-- (measured: indisvalid = false, indisready = false, and duplicates go in). An index that is
+-- invalid but READY does enforce uniqueness for new rows; that one is a gap (0.2.8).
+UPDATE pg_index SET indisvalid = false, indisready = false
  WHERE indexrelid = 'pgd2.t_id_uk'::regclass;
 
 SELECT living_assertions.run('promises:pgd2') IS NOT NULL AS re_escaneada;
