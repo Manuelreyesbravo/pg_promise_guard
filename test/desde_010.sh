@@ -22,16 +22,21 @@ RAIZ=$(cd "$(dirname "$0")/.." && pwd)
 export PGHOST=${PGHOST:-$RAIZ/.testcluster} PGPORT=${PGPORT:-5495}
 CONTROL=$PGHOST/ext/extension/pg_promise_guard.control
 BASE=promise_guard_test_desde_010
+TENANT=promise_guard_test_desde_010_tenant
 failures=0
 
 [ -L "$CONTROL" ] || { echo "no control link at $CONTROL: run test/cluster.sh init and start first" >&2; exit 2; }
+if [ "$($PSQL -X -d postgres -tAc "select 1 from pg_roles where rolname = '$TENANT'")" = 1 ]; then
+    echo "a role named $TENANT already exists: not dropping what this script did not create" >&2
+    exit 2
+fi
 if [ "$($PSQL -X -d postgres -tAc "select 1 from pg_database where datname = '$BASE'")" = 1 ]; then
     echo "a database named $BASE already exists: not dropping what this script did not create" >&2
     exit 2
 fi
 restore() {
     rm -f "$CONTROL" && ln -s "$RAIZ/pg_promise_guard.control" "$CONTROL"
-    $PSQL -X -d postgres -qc "drop database if exists $BASE" >/dev/null 2>&1 || true
+    $PSQL -X -d postgres -qc "drop database if exists $BASE" -c "drop role if exists $TENANT" >/dev/null 2>&1 || true
 }
 trap restore EXIT
 $PSQL -X -d postgres -qc "create database $BASE"
@@ -72,8 +77,8 @@ else
     failures=$((failures + 1))
 fi
 
-check "every function names pg_temp last, in the schema it is actually in" "3" \
-    "$($PSQL -X -d "$BASE" -tAc "select count(*) from pg_proc p join pg_depend d on d.objid = p.oid and d.deptype = 'e' join pg_extension e on e.oid = d.refobjid and e.extname = 'pg_promise_guard' where p.proconfig @> array['search_path=public, pg_catalog, pg_temp']")"
+check "every function searches pg_catalog first and pg_temp last, in the schema it is actually in" "3" \
+    "$($PSQL -X -d "$BASE" -tAc "select count(*) from pg_proc p join pg_depend d on d.objid = p.oid and d.deptype = 'e' join pg_extension e on e.oid = d.refobjid and e.extname = 'pg_promise_guard' where p.proconfig @> array['search_path=pg_catalog, public, pg_temp']")"
 
 # watch() has to declare an assertion that RUNS there -- since 0.2.0 it named promise_guard.
 $PSQL -X -d "$BASE" -q -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
@@ -86,6 +91,24 @@ SELECT public.watch('app');
 SQL
 check "the assertion watch() declares runs, and sees the disabled trigger" "broken" \
     "$($PSQL -X -d "$BASE" -tAc "select state from living_assertions.status where name = 'promises:app'" 2>&1 || true)"
+
+# PG-01 (external audit of 0.2.5): the extension's schema came BEFORE pg_catalog on its path,
+# and here that schema is public. A role that may create in public made public.pg_trigger and
+# public.pg_index, empty, and the scanner read them instead of the catalog: no finding,
+# promises_kept() true, and the assertion watch() declared said holds.
+$PSQL -X -d "$BASE" -q -c "create role $TENANT login" -c "grant create on schema public to $TENANT" >/dev/null
+PGUSER=$TENANT $PSQL -X -d "$BASE" -q -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+CREATE TABLE public.pg_index (indexrelid oid, indrelid oid, indisvalid bool, indisunique bool, indisready bool);
+CREATE TABLE public.pg_trigger (tgrelid oid, tgname name, tgenabled "char", tgisinternal bool);
+SQL
+check "control: the empty copies of pg_trigger and pg_index are in public" "2" \
+    "$($PSQL -X -d "$BASE" -tAc "select count(*) from pg_class where relnamespace = 'public'::regnamespace and relname in ('pg_trigger', 'pg_index')")"
+check "check_promises() still reads the real catalog: the disabled trigger" "app.audit" \
+    "$($PSQL -X -d "$BASE" -tAc "select object from public.check_promises('app')" 2>&1 || true)"
+check "  ...promises_kept() is false" "f" \
+    "$($PSQL -X -d "$BASE" -tAc "select public.promises_kept('app')" 2>&1 || true)"
+check "  ...and the watched assertion stays broken" "broken" \
+    "$($PSQL -X -d "$BASE" -tAc "select (living_assertions.run('promises:app')).state" 2>&1 || true)"
 
 if [ "$failures" -ne 0 ]; then
     echo "$failures check(s) failed"

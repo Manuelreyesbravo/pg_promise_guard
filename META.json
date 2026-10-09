@@ -2,7 +2,7 @@
    "name": "pg_promise_guard",
    "abstract": "Find the guarantees your schema claims and silently stopped enforcing",
    "description": "pg_promise_guard reports every guarantee your catalog advertises but no longer enforces \u2014 invalid unique indexes, NOT VALID constraints, triggers left disabled after a bulk load, RLS enabled but not forced \u2014 telling a live breach apart from a deliberate mid-migration gap. Reads only the system catalogs: no user data, no locks, no shared library.",
-   "version": "0.2.6",
+   "version": "0.2.7",
    "maintainer": [
       "Manuel Reyes <manuelreyesbravo@gmail.com>"
    ],
@@ -12,7 +12,7 @@
          "abstract": "Report constraints, indexes, triggers and RLS that stopped being enforced",
          "file": "pg_promise_guard--0.2.0.sql",
          "docfile": "README.md",
-         "version": "0.2.6"
+         "version": "0.2.7"
       }
    },
    "prereqs": {

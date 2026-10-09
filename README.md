@@ -71,6 +71,12 @@ Reads the system catalogs only. No user data, no locks, no dependencies, no
 shared library — it is one SQL function. Safe to run on a busy production
 database and cheap enough to run every minute.
 
+It reads the catalog it means to read. Since 0.2.7 every function searches
+`pg_catalog` first: until 0.2.6 the extension's own schema came first, and in an
+installation that began at 0.1.0 that schema is `public`, where a role allowed to
+create could add an empty `public.pg_trigger` and blind the scanner (external
+audit; `test/desde_010.sh`).
+
 ## What it does NOT do
 
 Declared here rather than hidden in the version number:

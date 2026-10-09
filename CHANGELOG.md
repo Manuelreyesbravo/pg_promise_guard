@@ -4,6 +4,19 @@ Versions are released on [PGXN](https://pgxn.org/dist/pg_promise_guard/). Each
 upgrade script (`pg_promise_guard--OLD--NEW.sql`) documents, in its own header,
 exactly what changed and why; that is the authoritative per-version record.
 
+## 0.2.7 -- 2026-10-09
+
+* **The scanner reads the real catalog, whatever schema the extension lives in (PG-01,
+  external audit of 0.2.5).** Every function searched its own schema before
+  `pg_catalog`. In an installation that began at 0.1.0 that schema is `public`, and a
+  role allowed to create there -- the default before PostgreSQL 15 -- added empty
+  `public.pg_trigger` and `public.pg_index`: `check_promises()` found nothing,
+  `promises_kept()` said true, and the watched assertion recorded `holds` over a
+  disabled trigger (measured on 0.2.6, `test/desde_010.sh`). Every function now searches
+  `pg_catalog` first; `watch()` qualifies what its check calls and declares it under that
+  path. Watches declared before 0.2.7 keep their old path: the upgrade names them, and
+  retiring and watching again moves them.
+
 ## 0.2.6 -- 2026-10-08
 
 * **Metadata only.** The PGXN description is two sentences now; the longer
