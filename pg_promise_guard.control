@@ -1,6 +1,6 @@
 # pg_promise_guard extension
 comment = 'Find the guarantees your schema claims to give and silently stopped giving'
-default_version = '0.2.8'
+default_version = '0.2.9'
 relocatable = false
 schema = promise_guard
 # Since 0.2.0, watch() records each scan as a living assertion, so the result

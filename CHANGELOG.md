@@ -4,6 +4,10 @@ Versions are released on [PGXN](https://pgxn.org/dist/pg_promise_guard/). Each
 upgrade script (`pg_promise_guard--OLD--NEW.sql`) documents, in its own header,
 exactly what changed and why; that is the authoritative per-version record.
 
+## 0.2.9 -- 2026-10-09
+
+No behavior change; names inside function bodies are English (a local variable of `watch()`).
+
 ## 0.2.8 -- 2026-10-09
 
 The Medium and Low findings of the external audit of 0.2.5, each measured on 0.2.7 first
